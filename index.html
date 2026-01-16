@@ -3,95 +3,252 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Studio - 創作者工作室</title>
+    <title>Study Master Studio v1.6 - Failsafe Version</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        html, body { height: 100vh; overflow: hidden; background-color: #f8fafc; }
+        .active-card { border: 2px solid #3b82f6 !important; background-color: #eff6ff !important; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    </style>
 </head>
-<body class="bg-slate-900 min-h-screen p-6 md:p-12 text-slate-100 flex flex-col items-center">
-    <header class="w-full max-w-4xl flex justify-between items-center mb-12">
-        <h1 class="text-3xl font-black tracking-tighter">STUDIO <span class="text-blue-500 text-sm ml-2">ADMIN</span></h1>
-        <a href="index.html" class="text-slate-400 hover:text-white font-bold text-sm">← 返回學習空間</a>
-    </header>
-    
-    <main class="w-full max-w-4xl bg-white text-slate-800 p-8 md:p-12 rounded-[3rem] shadow-2xl">
-        <div class="mb-10 p-6 bg-slate-50 rounded-3xl border border-slate-100">
-            <h2 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">雲端同步設定</h2>
-            <div class="flex gap-4">
-                <input type="password" id="sync-key" class="flex-1 p-4 bg-white border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold" placeholder="輸入同步金鑰連線...">
-                <button onclick="initSync()" class="bg-blue-600 text-white px-8 py-4 rounded-2xl font-black hover:bg-blue-700 transition">連線</button>
+<body class="flex flex-col text-slate-800 font-sans">
+
+    <header class="h-16 bg-slate-900 text-white px-6 flex justify-between items-center z-50 shadow-md">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-black italic">S</div>
+            <h1 class="font-black tracking-tighter text-lg uppercase">Study Master Studio</h1>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2 bg-slate-800 p-1 rounded-lg">
+                <input type="password" id="sync-key" class="bg-transparent border-none px-3 py-1 text-xs text-white outline-none w-24" placeholder="同步金鑰">
+                <button onclick="initSync()" class="text-[10px] font-black bg-blue-600 px-2 py-1 rounded hover:bg-blue-500 uppercase">Connect</button>
             </div>
-            <p id="sync-status" class="mt-4 text-xs font-bold text-slate-400 italic">尚未連線</p>
+            <a href="index.html" class="text-xs font-bold text-slate-400 uppercase hover:text-white transition">Exit</a>
         </div>
+    </header>
 
-        <div id="editor-zone" class="space-y-6">
-            <h2 class="text-sm font-black text-slate-400 uppercase tracking-widest">新增題組內容</h2>
-            <input type="text" id="new-quiz-name" class="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 font-bold" placeholder="題庫名稱...">
-            <textarea id="import-input" class="w-full h-80 p-6 bg-slate-50 border border-slate-200 rounded-2xl font-mono text-sm outline-none focus:ring-2 focus:ring-blue-500 resize-none" placeholder="貼上包含【文本】、題目、答案與解析的內容..."></textarea>
-            <button onclick="handleImport()" class="w-full bg-slate-900 text-white py-5 rounded-2xl font-black text-xl hover:bg-black transition-all">儲存並同步至雲端</button>
-        </div>
+    <main class="flex-1 flex overflow-hidden">
+        <aside class="w-72 bg-white border-r border-slate-200 flex flex-col z-40">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="font-black text-[10px] text-slate-400 uppercase tracking-widest">Notebooks</h2>
+                    <button onclick="createNewNote()" class="w-7 h-7 bg-slate-900 text-white rounded-full font-bold">+</button>
+                </div>
+                <div id="note-list" class="space-y-3 overflow-y-auto custom-scroll pr-2" style="max-height: calc(100vh - 350px);"></div>
+            </div>
 
-        <div class="mt-12 border-t border-slate-100 pt-10">
-            <h2 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-6">目前雲端題組清單</h2>
-            <div id="quiz-list" class="space-y-3"></div>
-        </div>
+            <div class="mt-auto p-6 bg-slate-50 border-t border-slate-100">
+                <label class="text-[10px] font-black text-slate-400 uppercase block mb-2">Gemini API Key</label>
+                <input type="password" id="gemini-key" onchange="saveGeminiKey()" class="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs text-emerald-600 outline-none mb-2" placeholder="AIza...">
+                <div id="api-status" class="text-[9px] font-bold text-slate-400 italic mb-4">狀態: 偵測中</div>
+                <button onclick="window.location.reload()" class="w-full py-2 border border-slate-300 rounded-lg text-[9px] font-bold text-slate-500 hover:bg-white uppercase">Refresh Page</button>
+            </div>
+        </aside>
+
+        <section class="flex-1 bg-white overflow-y-auto custom-scroll relative">
+            <div id="editor-container" class="hidden p-8 md:p-12 lg:p-20 max-w-4xl mx-auto pb-64">
+                <input type="text" id="note-title" class="w-full text-5xl font-black border-none outline-none mb-10 placeholder-slate-100" placeholder="標題">
+                <textarea id="note-content" class="w-full h-auto min-h-[400px] text-xl leading-relaxed text-slate-600 outline-none resize-none mb-10 font-serif" placeholder="在此輸入筆記素材..."></textarea>
+                
+                <div class="mb-12">
+                    <button onclick="saveNote()" class="bg-slate-100 hover:bg-slate-200 px-8 py-3 rounded-2xl text-sm font-black transition">儲存素材內容</button>
+                </div>
+
+                <div class="bg-slate-900 rounded-[2.5rem] p-10 text-white shadow-2xl">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+                        <div>
+                            <h3 class="text-2xl font-black italic">✨ AI 命題控制台</h3>
+                            <p class="text-slate-400 text-xs mt-1">自動嘗試最佳連結路徑 (v1/v1beta)</p>
+                        </div>
+                        <select id="model-select" class="bg-slate-800 border-none rounded-xl text-xs font-bold p-3 outline-none">
+                            <option value="gemini-1.5-pro">Gemini 1.5 Pro (推薦)</option>
+                            <option value="gemini-1.5-flash">Gemini 1.5 Flash (快速)</option>
+                        </select>
+                    </div>
+                    
+                    <button id="ai-btn" onclick="generateQuiz()" class="w-full bg-blue-600 hover:bg-blue-500 py-6 rounded-2xl font-black text-xl transition-all shadow-xl flex items-center justify-center gap-3 cursor-pointer">
+                        <span>一鍵生成題組</span>
+                    </button>
+                </div>
+
+                <div id="ai-result-area" class="mt-12 hidden">
+                    <div class="flex justify-between items-center mb-6 text-slate-400">
+                        <span class="text-[10px] font-black uppercase tracking-widest">AI Output</span>
+                        <button onclick="syncToQuiz()" class="bg-emerald-600 text-white px-8 py-3 rounded-full font-black text-sm hover:bg-emerald-500 transition">確認同步至題庫</button>
+                    </div>
+                    <textarea id="ai-output" class="w-full h-96 p-8 bg-slate-50 rounded-[2rem] border-2 border-slate-100 font-mono text-xs outline-none leading-relaxed" spellcheck="false"></textarea>
+                </div>
+            </div>
+
+            <div id="empty-state" class="absolute inset-0 flex flex-col items-center justify-center text-slate-200 pointer-events-none">
+                <p class="text-8xl mb-6 opacity-10">📖</p>
+                <p class="font-black italic text-xl">SELECT A NOTE TO BEGIN</p>
+            </div>
+        </section>
     </main>
+
+    <div id="ai-loader" class="fixed inset-0 bg-slate-900/95 backdrop-blur-md z-[100] hidden flex-col items-center justify-center text-white text-center">
+        <div class="w-16 h-16 border-4 border-white/20 border-t-blue-500 rounded-full animate-spin mb-8 mx-auto"></div>
+        <p class="font-black text-2xl tracking-tighter">AI 正在深度思考與命題中...</p>
+        <p class="text-slate-500 text-sm mt-2 italic uppercase">Analyzing historical logic</p>
+    </div>
 
     <script>
         const firebaseConfig = { apiKey: "AIzaSyD719pOpRDq9gfn8MpRsKILmYY8d0y-3n4", authDomain: "learning-41290.firebaseapp.com", projectId: "learning-41290", storageBucket: "learning-41290.firebasestorage.app", messagingSenderId: "451785140537", appId: "1:451785140537:web:668bc05ffa6fe68a51e0e8" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-        
-        let allQuizzes = [], syncKey = localStorage.getItem('master_sync_key') || '';
+
+        let notebooks = [], quizzes = [], syncKey = localStorage.getItem('master_sync_key') || '';
+        let currentNoteIndex = -1, geminiKey = localStorage.getItem('master_gemini_key') || '';
+
         if(syncKey) { document.getElementById('sync-key').value = syncKey; initSync(); }
+        if(geminiKey) { document.getElementById('gemini-key').value = geminiKey; checkApiStatus(); }
 
         async function initSync() {
             const key = document.getElementById('sync-key').value.trim();
             if (!key) return; syncKey = key; localStorage.setItem('master_sync_key', key);
             db.collection("users").doc(syncKey).onSnapshot((doc) => {
-                if (doc.exists) { allQuizzes = doc.data().quizzes || []; document.getElementById('sync-status').innerText = "✅ 已成功連線至「" + syncKey + "」"; renderList(); }
-                else { db.collection("users").doc(syncKey).set({ quizzes: [] }); document.getElementById('sync-status').innerText = "🆕 已建立全新雲端空間"; }
+                if (doc.exists) { 
+                    notebooks = doc.data().notebooks || [];
+                    quizzes = doc.data().quizzes || [];
+                    renderNoteList();
+                } else {
+                    db.collection("users").doc(syncKey).set({ notebooks: [], quizzes: [] });
+                }
             });
         }
 
-        function renderList() {
-            const list = document.getElementById('quiz-list'); list.innerHTML = '';
-            allQuizzes.forEach((q, idx) => {
-                const item = document.createElement('div');
-                item.className = "p-4 bg-slate-50 rounded-2xl flex justify-between items-center border border-slate-100 font-bold text-slate-700";
-                item.innerHTML = `<span>${q.name}</span><button onclick="deleteQuiz(${idx})" class="text-rose-500 hover:text-rose-700">刪除</button>`;
-                list.appendChild(item);
+        function saveGeminiKey() {
+            geminiKey = document.getElementById('gemini-key').value.trim();
+            localStorage.setItem('master_gemini_key', geminiKey);
+            checkApiStatus();
+        }
+
+        function checkApiStatus() {
+            const status = document.getElementById('api-status');
+            status.innerText = geminiKey.startsWith('AIza') ? "✅ Key Connected" : "❌ Key Error";
+            status.style.color = geminiKey.startsWith('AIza') ? "#10b981" : "#ef4444";
+        }
+
+        function renderNoteList() {
+            const list = document.getElementById('note-list'); list.innerHTML = '';
+            notebooks.forEach((n, idx) => {
+                const card = document.createElement('div');
+                card.className = `p-4 rounded-xl border border-slate-100 cursor-pointer transition shadow-sm ${currentNoteIndex === idx ? 'active-card' : 'bg-white'} mx-4`;
+                card.innerHTML = `<h3 class="font-black text-xs truncate">${n.title || '新筆記'}</h3>`;
+                card.onclick = () => loadNote(idx);
+                list.appendChild(card);
             });
         }
 
-        async function handleImport() {
-            const name = document.getElementById('new-quiz-name').value || `題組 ${new Date().toLocaleDateString()}`;
-            const parsed = smartParse(document.getElementById('import-input').value);
-            if (!syncKey) return alert("請先輸入金鑰並連線！");
-            if (parsed.length === 0) return alert("解析失敗，請確認格式。");
-            allQuizzes.push({ name, data: parsed });
-            await db.collection("users").doc(syncKey).set({ quizzes: allQuizzes });
-            alert("題組已成功同步！");
-            document.getElementById('new-quiz-name').value = ''; document.getElementById('import-input').value = '';
+        function createNewNote() {
+            currentNoteIndex = notebooks.length;
+            notebooks.push({ title: '', content: '' });
+            loadNote(currentNoteIndex);
+            renderNoteList();
         }
 
-        async function deleteQuiz(idx) { if(confirm("確定刪除此雲端題組？")) { allQuizzes.splice(idx, 1); await db.collection("users").doc(syncKey).set({ quizzes: allQuizzes }); } }
+        function loadNote(idx) {
+            currentNoteIndex = idx;
+            document.getElementById('empty-state').classList.add('hidden');
+            document.getElementById('editor-container').classList.remove('hidden');
+            document.getElementById('note-title').value = notebooks[idx].title;
+            const contentArea = document.getElementById('note-content');
+            contentArea.value = notebooks[idx].content;
+            document.getElementById('ai-result-area').classList.add('hidden');
+            renderNoteList();
+        }
 
-        function smartParse(text) {
-            const lines = text.split('\n'); let questions = [], activePassage = "", currentQ = null, currentMode = "";
+        async function saveNote() {
+            if (currentNoteIndex === -1) return;
+            notebooks[currentNoteIndex].title = document.getElementById('note-title').value;
+            notebooks[currentNoteIndex].content = document.getElementById('note-content').value;
+            await db.collection("users").doc(syncKey).update({ notebooks: notebooks });
+            alert("已同步至雲端素材庫");
+        }
+
+        async function callGemini(apiVersion, model, key, content) {
+            const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${key}`;
+            const prompt = `你是一位資深高中命題名師。請根據以下素材，生成 5 題具備深度思考邏輯的選擇題。
+
+            【格式規範】：
+            Q1. [題目文字]
+            (A) [選項A] (B) [選項B] (C) [選項C] (D) [選項D]
+            答案：[A/B/C/D]
+            解析：[詳細解釋原因]
+
+            素材：${content}`;
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            });
+            return response;
+        }
+
+        async function generateQuiz() {
+            const content = document.getElementById('note-content').value.trim();
+            const model = document.getElementById('model-select').value;
+            if (!geminiKey) return alert("請輸入 API Key");
+            if (!content) return alert("筆記內容不可為空");
+
+            const loader = document.getElementById('ai-loader');
+            loader.style.display = 'flex';
+
+            try {
+                // 嘗試 1: 使用 v1
+                console.log("嘗試使用 v1 請求...");
+                let response = await callGemini('v1', model, geminiKey, content);
+                
+                if (!response.ok) {
+                    // 嘗試 2: 如果 v1 失敗，嘗試 v1beta
+                    console.log("v1 失敗，嘗試切換至 v1beta...");
+                    response = await callGemini('v1beta', model, geminiKey, content);
+                }
+
+                const data = await response.json();
+                if (data.error) throw new Error(data.error.message);
+
+                document.getElementById('ai-output').value = data.candidates[0].content.parts[0].text;
+                document.getElementById('ai-result-area').classList.remove('hidden');
+                document.getElementById('ai-result-area').scrollIntoView({ behavior: 'smooth' });
+
+            } catch (err) {
+                alert("AI 生成最終失敗：" + err.message + "\n\n請確認你的 Google API Key 是否支援該模型。");
+            } finally {
+                loader.style.display = 'none';
+            }
+        }
+
+        async function syncToQuiz() {
+            const rawText = document.getElementById('ai-output').value;
+            const lines = rawText.split('\n'); let questions = [], currentQ = null;
             lines.forEach(line => {
                 const l = line.trim();
-                if (!l && currentMode !== "PASSAGE" && currentMode !== "RATIONALE") return;
-                if (l.includes('【文本】')) { currentMode = "PASSAGE"; activePassage = line.replace('【文本】', '').trim(); return; }
-                if (l.match(/^(Q\d+|[0-9]+)[\.\:：]/)) { currentMode = "QUESTION"; if (currentQ) questions.push(currentQ); currentQ = { passage: activePassage, q: l, options: [], ans: 0, rationale: "" }; return; }
-                if (l.match(/^答案[:：]/)) { currentMode = "ANSWER"; const ans = l.match(/[A-D]/i); if (currentQ && ans) currentQ.ans = ans[0].toUpperCase().charCodeAt(0) - 65; return; }
-                if (l.match(/^解析[:：]/)) { currentMode = "RATIONALE"; if (currentQ) currentQ.rationale = l.replace(/^解析[:：]/, '').trim(); return; }
-                if (currentMode !== "RATIONALE" && l.match(/^\([A-D]\)/)) { currentMode = "OPTIONS"; const opts = l.match(/\([A-D]\)[^(\n]+/g).map(o => o.replace(/\([A-D]\)/, '').trim()); if (currentQ) currentQ.options.push(...opts); return; }
-                if (currentMode === "PASSAGE") activePassage += (activePassage ? "\n" : "") + line;
-                else if (currentMode === "QUESTION" && currentQ) currentQ.q += "\n" + line;
-                else if (currentMode === "RATIONALE" && currentQ) currentQ.rationale += (currentQ.rationale ? "\n" : "") + line;
+                if (l.match(/^(Q\d+|[0-9]+)[\.\:：]/)) { 
+                    if (currentQ) questions.push(currentQ); 
+                    currentQ = { q: l, options: [], ans: 0, rationale: "" }; 
+                } else if (l.match(/^答案[:：]/)) { 
+                    const ans = l.match(/[A-D]/i); 
+                    if (currentQ && ans) currentQ.ans = ans[0].toUpperCase().charCodeAt(0) - 65; 
+                } else if (l.match(/^解析[:：]/)) { 
+                    if (currentQ) currentQ.rationale = l.replace(/^解析[:：]/, '').trim(); 
+                } else if (l.match(/^\([A-D]\)/)) { 
+                    const opts = l.match(/\([A-D]\)[^(\n]+/g).map(o => o.replace(/\([A-D]\)/, '').trim()); 
+                    if (currentQ) currentQ.options.push(...opts); 
+                }
             });
-            if (currentQ) questions.push(currentQ); return questions;
+            if (currentQ) questions.push(currentQ);
+            
+            quizzes.push({ name: document.getElementById('note-title').value + " (AI)", data: questions });
+            await db.collection("users").doc(syncKey).update({ quizzes: quizzes });
+            alert("已發送至學習空間！");
         }
     </script>
 </body>
