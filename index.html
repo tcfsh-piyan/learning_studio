@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Studio v2.1 - 一中/學測文科專修版</title>
+    <title>Studio v2.3 - 一中/學測文科專修 (修復版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         html, body { height: 100vh; overflow: hidden; background-color: #0f172a; color: #f1f5f9; }
@@ -103,7 +102,7 @@
 
     <div id="ai-loader" class="fixed inset-0 bg-slate-950/90 backdrop-blur-xl z-[100] hidden flex-col items-center justify-center text-white">
         <div class="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mb-8"></div>
-        <p class="font-black text-2xl tracking-tighter">正在執行一中級邏輯演算...</p>
+        <p class="font-black text-2xl tracking-tighter">AI 正在執行一中級邏輯演算...</p>
         <p class="text-slate-500 text-sm mt-2 italic uppercase">Analyzing humanities causality</p>
     </div>
 
@@ -118,7 +117,6 @@
         if(syncKey) { document.getElementById('sync-key').value = syncKey; initSync(); }
         if(geminiKey) { document.getElementById('gemini-key').value = geminiKey; checkApiStatus(); }
 
-        // --- 同步與基礎功能 ---
         async function initSync() {
             const key = document.getElementById('sync-key').value.trim();
             if (!key) return; syncKey = key; localStorage.setItem('master_sync_key', key);
@@ -187,7 +185,7 @@
             alert("素材已存檔");
         }
 
-        // --- ✨ 核心文科命題引擎 ---
+        // --- ✨ 核心文科命題引擎 (修正版) ---
         async function generateQuiz() {
             const content = document.getElementById('note-content').value.trim();
             if (!geminiKey) return alert("請輸入 API Key");
@@ -202,7 +200,9 @@
                 SOCIAL: "你是一位高中社會科命題名師。請根據素材（特別注意 1968-1991 的歷史因果鏈或公民法律情境）設計 5 題情境敘述題。重點在於外交決策的因果邏輯、法律條文的具體適用性。"
             };
 
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-002:generateContent?key=${geminiKey}`;
+            // 修正：使用通用名稱，避免 404
+            const modelName = "gemini-1.5-pro"; 
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiKey}`;
 
             try {
                 const response = await fetch(url, {
