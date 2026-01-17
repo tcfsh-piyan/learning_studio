@@ -3,175 +3,174 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Studio v2.4 - 一中/學測文科專修 (通用路徑版)</title>
+    <title>Study Master Studio v3.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         html, body { height: 100vh; overflow: hidden; background-color: #0f172a; color: #f1f5f9; }
-        .active-card { border-left: 4px solid #3b82f6 !important; background-color: rgba(59, 130, 246, 0.1) !important; }
+        .tab-active { color: #3b82f6; border-bottom: 3px solid #3b82f6; }
         .custom-scroll::-webkit-scrollbar { width: 5px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
-        .mode-btn.active { border-color: #3b82f6; background-color: rgba(59, 130, 246, 0.2); }
+        textarea { scrollbar-width: thin; scrollbar-color: #334155 transparent; }
     </style>
 </head>
 <body class="flex flex-col font-sans">
 
-    <header class="h-16 bg-slate-900 border-b border-slate-800 px-6 flex justify-between items-center z-50">
-        <div class="flex items-center gap-3">
-            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-black italic shadow-lg shadow-blue-500/20">S</div>
-            <h1 class="font-black tracking-tighter text-lg uppercase">Study Master <span class="text-blue-500">Elite</span></h1>
+    <header class="h-20 bg-slate-900 border-b border-slate-800 px-8 flex justify-between items-center z-50">
+        <div class="flex items-center gap-6">
+            <h1 class="font-black tracking-tighter text-xl text-blue-500 italic">STUDIO 3.0</h1>
+            <nav class="flex gap-8 ml-4">
+                <button onclick="switchTab('ai')" id="tab-ai" class="tab-active py-2 text-sm font-black uppercase tracking-widest transition-all">AI 命題工作室</button>
+                <button onclick="switchTab('manual')" id="tab-manual" class="py-2 text-sm font-black uppercase tracking-widest text-slate-500 transition-all hover:text-slate-300">手動題本管理</button>
+            </nav>
         </div>
+        
         <div class="flex items-center gap-4">
-            <div class="flex items-center gap-2 bg-slate-800 p-1 rounded-xl border border-white/5 text-xs">
+            <div class="flex items-center gap-2 bg-slate-800 p-1 rounded-xl border border-white/5 text-[10px]">
                 <input type="password" id="sync-key" class="bg-transparent border-none px-3 py-1 text-white outline-none w-24" placeholder="同步金鑰">
                 <button onclick="initSync()" class="font-black bg-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-500 transition">CONNECT</button>
             </div>
-            <a href="index.html" class="text-xs font-bold text-slate-500 hover:text-white transition">Exit</a>
+            <a href="index.html" class="text-xs font-bold text-slate-500 hover:text-white transition uppercase">Exit</a>
         </div>
     </header>
 
-    <main class="flex-1 flex overflow-hidden">
-        <aside class="w-72 bg-slate-900/50 border-r border-slate-800 flex flex-col z-40">
-            <div class="p-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="font-black text-[10px] text-slate-500 uppercase tracking-widest">Notebooks</h2>
-                    <button onclick="createNewNote()" class="w-7 h-7 bg-white text-slate-900 rounded-full font-bold hover:scale-110 transition">+</button>
+    <main class="flex-1 overflow-hidden relative">
+        
+        <div id="view-ai" class="absolute inset-0 flex">
+            <aside class="w-72 bg-slate-900/50 border-r border-slate-800 p-6 flex flex-col">
+                <h2 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6">AI Notebooks</h2>
+                <div id="note-list" class="flex-1 space-y-2 overflow-y-auto custom-scroll pr-2"></div>
+                <button onclick="createNewNote()" class="w-full mt-4 py-3 bg-slate-800 rounded-xl text-xs font-bold hover:bg-slate-700 transition">+ 新增素材</button>
+                
+                <div class="mt-8 pt-6 border-t border-slate-800">
+                    <label class="text-[9px] font-black text-slate-500 uppercase block mb-2">Gemini API Key</label>
+                    <input type="password" id="gemini-key" onchange="saveKey()" class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-xs text-emerald-400 outline-none" placeholder="AIza...">
                 </div>
-                <div id="note-list" class="space-y-2 overflow-y-auto custom-scroll pr-2" style="max-height: calc(100vh - 350px);"></div>
-            </div>
+            </aside>
 
-            <div class="mt-auto p-6 border-t border-slate-800">
-                <label class="text-[10px] font-black text-slate-500 uppercase block mb-2">Gemini API Key</label>
-                <input type="password" id="gemini-key" onchange="saveGeminiKey()" class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-xs text-emerald-400 outline-none mb-2" placeholder="AIza...">
-                <div id="api-status" class="text-[9px] font-bold text-slate-500 italic">API 狀態：未偵測</div>
-            </div>
-        </aside>
-
-        <section class="flex-1 bg-slate-900 overflow-y-auto custom-scroll relative">
-            <div id="editor-container" class="hidden p-8 md:p-12 lg:p-16 max-w-4xl mx-auto pb-64">
-                <div class="flex justify-between items-start mb-8">
-                    <input type="text" id="note-title" class="bg-transparent text-5xl font-black border-none outline-none placeholder-slate-800 flex-1" placeholder="素材標題">
-                    <button onclick="saveNote()" class="ml-4 bg-slate-800 hover:bg-slate-700 text-white px-6 py-2 rounded-xl text-xs font-bold transition">同步素材</button>
-                </div>
-
-                <textarea id="note-content" class="w-full h-auto min-h-[400px] bg-transparent text-xl leading-relaxed text-slate-300 outline-none resize-none mb-12 font-serif" placeholder="在此貼上雜誌文本、歷史考點或國文課文..."></textarea>
-
-                <div class="bg-slate-800/50 rounded-[3rem] p-10 border border-white/5 shadow-2xl">
-                    <h3 class="text-2xl font-black italic mb-8 flex items-center gap-3">
-                        <span class="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
-                        一中 / 學測命題引擎
-                    </h3>
+            <section class="flex-1 overflow-y-auto custom-scroll p-12">
+                <div id="ai-editor" class="hidden max-w-4xl mx-auto">
+                    <input type="text" id="note-title" class="bg-transparent text-5xl font-black border-none outline-none mb-8 w-full placeholder-slate-800" placeholder="素材標題">
+                    <textarea id="note-content" class="w-full min-h-[300px] bg-transparent text-xl leading-relaxed text-slate-300 outline-none resize-none mb-10 font-serif" placeholder="在此貼上雜誌、歷史或公民素材..."></textarea>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                        <button onclick="setMode('CHINESE')" id="btn-CHINESE" class="mode-btn p-4 rounded-2xl border border-slate-700 text-left transition-all active">
-                            <h4 class="font-black text-sm text-blue-400">國文：素養對讀</h4>
-                            <p class="text-[9px] text-slate-500 mt-1">文白比較與思想析論</p>
-                        </button>
-                        <button onclick="setMode('ENGLISH')" id="btn-ENGLISH" class="mode-btn p-4 rounded-2xl border border-slate-700 text-left transition-all">
-                            <h4 class="font-black text-sm text-emerald-400">英文：語境選填</h4>
-                            <p class="text-[9px] text-slate-500 mt-1">雜誌克漏字與 7000 單</p>
-                        </button>
-                        <button onclick="setMode('SOCIAL')" id="btn-SOCIAL" class="mode-btn p-4 rounded-2xl border border-slate-700 text-left transition-all">
-                            <h4 class="font-black text-sm text-amber-400">社會：高階思辨</h4>
-                            <p class="text-[9px] text-slate-500 mt-1">1968-1991 歷史因果鏈</p>
-                        </button>
+                    <div class="bg-slate-800/80 rounded-[3rem] p-10 border border-white/5 shadow-2xl">
+                        <div class="flex justify-between items-center mb-8">
+                            <h3 class="text-xl font-bold italic">AI 命題控制台</h3>
+                            <select id="model-select" class="bg-slate-900 text-xs p-2 rounded-lg border-none outline-none text-blue-400">
+                                <option value="gemini-1.5-flash">Gemini 1.5 Flash (快速)</option>
+                                <option value="gemini-1.5-pro">Gemini 1.5 Pro (深度推理)</option>
+                            </select>
+                        </div>
+                        <button onclick="generateQuiz()" class="w-full bg-blue-600 hover:bg-blue-500 py-6 rounded-2xl font-black text-xl shadow-xl transition-all active:scale-95">一鍵生成題組</button>
                     </div>
 
-                    <button id="ai-btn" onclick="generateQuiz()" class="w-full bg-blue-600 hover:bg-blue-500 py-6 rounded-3xl font-black text-xl transition-all shadow-xl shadow-blue-900/20 active:scale-95">
-                        一鍵生成一中級題組
-                    </button>
-                </div>
-
-                <div id="ai-result-area" class="mt-16 hidden">
-                    <div class="flex justify-between items-center mb-6">
-                        <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">AI Output Preview</span>
-                        <button onclick="syncToQuiz()" class="bg-emerald-600 text-white px-8 py-3 rounded-full font-black text-sm hover:bg-emerald-500 transition shadow-lg">確認並同步至題庫</button>
+                    <div id="ai-result-area" class="mt-12 hidden">
+                        <div class="flex justify-between items-center mb-4 text-[10px] font-black text-slate-500 uppercase">AI Output Preview</div>
+                        <textarea id="ai-output" class="w-full h-80 p-8 bg-black/50 rounded-[2rem] border border-slate-800 text-slate-300 font-mono text-xs leading-relaxed outline-none mb-4"></textarea>
+                        <button onclick="syncToQuiz('ai')" class="w-full bg-emerald-600 py-4 rounded-xl font-black hover:bg-emerald-500 transition">確認同步至學習空間</button>
                     </div>
-                    <textarea id="ai-output" class="w-full h-96 p-8 bg-black/50 rounded-[2.5rem] border border-slate-800 text-slate-300 font-mono text-xs outline-none leading-relaxed" spellcheck="false"></textarea>
+                </div>
+                <div id="ai-empty" class="h-full flex flex-col items-center justify-center text-slate-800">
+                    <p class="text-9xl mb-4 opacity-20">🤖</p>
+                    <p class="font-black italic text-xl uppercase">選擇素材開始 AI 命題</p>
+                </div>
+            </section>
+        </div>
+
+        <div id="view-manual" class="absolute inset-0 hidden flex flex-col p-12 overflow-y-auto custom-scroll">
+            <div class="max-w-5xl w-full mx-auto">
+                <div class="flex justify-between items-end mb-10">
+                    <div class="flex-1">
+                        <h2 class="text-sm font-black text-blue-500 uppercase tracking-[0.3em] mb-4">Manual Import</h2>
+                        <input type="text" id="manual-quiz-name" class="w-full bg-transparent text-5xl font-black border-none outline-none placeholder-slate-800" placeholder="題本名稱 (如：1979歷史複習)">
+                    </div>
+                    <div class="bg-slate-800 px-6 py-2 rounded-full text-[10px] font-bold text-slate-400 uppercase tracking-widest border border-white/5">
+                        手動模式：支援【文本】格式
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2">
+                        <textarea id="manual-input" class="w-full h-[600px] bg-slate-800/30 border border-slate-800 rounded-[2.5rem] p-8 font-mono text-sm leading-relaxed text-slate-300 outline-none focus:border-blue-500 transition shadow-inner" placeholder="貼上你寫好的題本內容...&#10;&#10;【文本】(可選)&#10;Q1. 題目&#10;(A) 選項 (B) 選項 (C) 選項 (D) 選項&#10;答案：A&#10;解析：..."></textarea>
+                    </div>
+                    <div class="flex flex-col gap-6">
+                        <div class="bg-slate-800/50 rounded-3xl p-8 border border-white/5">
+                            <h4 class="text-xs font-black text-slate-400 uppercase mb-4 tracking-widest">操作指南</h4>
+                            <p class="text-xs leading-relaxed text-slate-500 mb-6">
+                                這個介面專門用來處理你已經整理好的題目。點擊下方按鈕後，系統會自動解析並同步至雲端資料庫。
+                            </p>
+                            <button onclick="syncToQuiz('manual')" class="w-full bg-slate-100 text-slate-900 py-5 rounded-2xl font-black text-lg hover:bg-white transition-all shadow-xl active:scale-95">
+                                儲存並發送題本
+                            </button>
+                        </div>
+                        <div id="manual-status" class="flex-1 bg-black/30 rounded-3xl p-6 border border-slate-800 font-mono text-[10px] text-slate-500">
+                            等待輸入...
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            <div id="empty-state" class="absolute inset-0 flex flex-col items-center justify-center text-slate-800">
-                <p class="text-9xl mb-6 opacity-20">📖</p>
-                <p class="font-black italic text-xl">SELECT A NOTE TO START</p>
-            </div>
-        </section>
+        </div>
     </main>
 
-    <div id="ai-loader" class="fixed inset-0 bg-slate-950/90 backdrop-blur-xl z-[100] hidden flex-col items-center justify-center text-white">
-        <div class="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mb-8"></div>
-        <p class="font-black text-2xl tracking-tighter">AI 正在執行一中級邏輯演算...</p>
-        <p class="text-slate-500 text-sm mt-2 italic uppercase">Analyzing humanities causality</p>
+    <div id="loader" class="fixed inset-0 bg-slate-950/90 backdrop-blur-xl z-[100] hidden flex-col items-center justify-center text-white">
+        <div class="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mb-6"></div>
+        <p class="font-black text-xl tracking-tighter">處理中，請稍候...</p>
     </div>
 
     <script>
+        // Firebase 與全域變數
         const firebaseConfig = { apiKey: "AIzaSyD719pOpRDq9gfn8MpRsKILmYY8d0y-3n4", authDomain: "learning-41290.firebaseapp.com", projectId: "learning-41290", storageBucket: "learning-41290.firebasestorage.app", messagingSenderId: "451785140537", appId: "1:451785140537:web:668bc05ffa6fe68a51e0e8" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
         let notebooks = [], quizzes = [], syncKey = localStorage.getItem('master_sync_key') || '';
-        let currentNoteIndex = -1, geminiKey = localStorage.getItem('master_gemini_key') || '', currentMode = 'CHINESE';
+        let currentNoteIndex = -1, geminiKey = localStorage.getItem('master_gemini_key') || '';
 
         if(syncKey) { document.getElementById('sync-key').value = syncKey; initSync(); }
-        if(geminiKey) { document.getElementById('gemini-key').value = geminiKey; checkApiStatus(); }
+        if(geminiKey) document.getElementById('gemini-key').value = geminiKey;
 
-        // --- 同步與基礎功能 ---
+        // --- 功能切換 ---
+        function switchTab(mode) {
+            document.getElementById('view-ai').classList.toggle('hidden', mode !== 'ai');
+            document.getElementById('view-manual').classList.toggle('hidden', mode !== 'manual');
+            document.getElementById('tab-ai').className = mode === 'ai' ? 'tab-active py-2 text-sm font-black uppercase tracking-widest transition-all' : 'py-2 text-sm font-black uppercase tracking-widest text-slate-500 transition-all hover:text-slate-300';
+            document.getElementById('tab-manual').className = mode === 'manual' ? 'tab-active py-2 text-sm font-black uppercase tracking-widest transition-all' : 'py-2 text-sm font-black uppercase tracking-widest text-slate-500 transition-all hover:text-slate-300';
+        }
+
+        // --- 同步與筆記管理 ---
         async function initSync() {
             const key = document.getElementById('sync-key').value.trim();
-            if (!key) return; syncKey = key; localStorage.setItem('master_sync_key', key);
-            db.collection("users").doc(syncKey).onSnapshot((doc) => {
-                if (doc.exists) { 
-                    notebooks = doc.data().notebooks || [];
-                    quizzes = doc.data().quizzes || [];
-                    renderNoteList();
+            if(!key) return; syncKey = key; localStorage.setItem('master_sync_key', key);
+            db.collection("users").doc(syncKey).onSnapshot(doc => {
+                if(doc.exists) { 
+                    notebooks = doc.data().notebooks || []; 
+                    quizzes = doc.data().quizzes || []; 
+                    renderNoteList(); 
                 } else {
                     db.collection("users").doc(syncKey).set({ notebooks: [], quizzes: [] });
                 }
             });
         }
 
-        function saveGeminiKey() {
-            geminiKey = document.getElementById('gemini-key').value.trim();
-            localStorage.setItem('master_gemini_key', geminiKey);
-            checkApiStatus();
-        }
-
-        function checkApiStatus() {
-            const status = document.getElementById('api-status');
-            status.innerText = geminiKey.startsWith('AIza') ? "✅ API Key 連線中" : "❌ Key 格式錯誤";
-            status.style.color = geminiKey.startsWith('AIza') ? "#10b981" : "#ef4444";
-        }
-
-        function setMode(mode) {
-            currentMode = mode;
-            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(`btn-${mode}`).classList.add('active');
-        }
+        function saveKey() { geminiKey = document.getElementById('gemini-key').value.trim(); localStorage.setItem('master_gemini_key', geminiKey); }
 
         function renderNoteList() {
             const list = document.getElementById('note-list'); list.innerHTML = '';
             notebooks.forEach((n, idx) => {
                 const card = document.createElement('div');
-                card.className = `p-4 rounded-xl border border-transparent cursor-pointer transition ${currentNoteIndex === idx ? 'active-card' : ''} hover:bg-white/5 mx-2`;
-                card.innerHTML = `<h3 class="font-black text-[11px] truncate uppercase tracking-tighter">${n.title || 'Untitled'}</h3>`;
+                card.className = `p-3 rounded-lg cursor-pointer transition text-[11px] font-bold uppercase tracking-tighter ${currentNoteIndex === idx ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`;
+                card.innerHTML = n.title || 'Untitled';
                 card.onclick = () => loadNote(idx);
                 list.appendChild(card);
             });
         }
 
-        function createNewNote() {
-            currentNoteIndex = notebooks.length;
-            notebooks.push({ title: '', content: '' });
-            loadNote(currentNoteIndex);
-            renderNoteList();
-        }
-
+        function createNewNote() { currentNoteIndex = notebooks.length; notebooks.push({ title: '', content: '' }); loadNote(currentNoteIndex); renderNoteList(); }
         function loadNote(idx) {
             currentNoteIndex = idx;
-            document.getElementById('empty-state').classList.add('hidden');
-            document.getElementById('editor-container').classList.remove('hidden');
+            document.getElementById('ai-empty').classList.add('hidden');
+            document.getElementById('ai-editor').classList.remove('hidden');
             document.getElementById('note-title').value = notebooks[idx].title;
             document.getElementById('note-content').value = notebooks[idx].content;
             document.getElementById('ai-result-area').classList.add('hidden');
@@ -182,75 +181,75 @@
             if (currentNoteIndex === -1) return;
             notebooks[currentNoteIndex].title = document.getElementById('note-title').value;
             notebooks[currentNoteIndex].content = document.getElementById('note-content').value;
-            await db.collection("users").doc(syncKey).update({ notebooks: notebooks });
-            alert("素材已存檔");
+            await db.collection("users").doc(syncKey).update({ notebooks });
+            alert("素材已儲存並同步");
         }
 
-        // --- ✨ 核心文科命題引擎 (修正版) ---
+        // --- AI 命題 ---
         async function generateQuiz() {
             const content = document.getElementById('note-content').value.trim();
-            if (!geminiKey) return alert("請輸入 API Key");
-            if (!content) return alert("素材內容不可為空");
+            const model = document.getElementById('model-select').value;
+            if(!geminiKey) return alert("請輸入 API Key");
+            if(!content) return alert("內容不可為空");
 
-            const loader = document.getElementById('ai-loader');
-            loader.classList.add('flex');
-
-            const prompts = {
-                CHINESE: "你是一位台中一中與學測國文專家。請根據素材（若包含文言文則進行文白對讀）設計 5 題高品質選擇題。重點在於文本間的主題意識比較、關鍵語法推論與生命意識。不要只考翻譯，要考思辨。",
-                ENGLISH: "你是一位學測英文專家。請根據這段雜誌文本設計 5 題題組。題型需包含：克漏字（Cloze Test）與文意選填（Banked Cloze）。單字難度須鎖定在學測 4500-7000 單，選項需具備高度語境干擾性。",
-                SOCIAL: "你是一位高中社會科命題名師。請根據素材（特別注意 1968-1991 的歷史因果鏈或公民法律情境）設計 5 題情境敘述題。重點在於外交決策的因果邏輯、法律條文的具體適用性。"
-            };
-
-            // 修正：使用通用名稱 "gemini-1.5-pro"，解決 404 問題
-            const modelName = "gemini-1.5-pro"; 
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiKey}`;
-
+            document.getElementById('loader').classList.replace('hidden', 'flex');
             try {
-                const response = await fetch(url, {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompts[currentMode] + "\n\n素材內容：\n" + content + "\n\n格式規範：Q1. [題目]\n(A) [選] (B) [選] (C) [選] (D) [選]\n答案：X\n解析：[詳細思辨分析]" }] }] })
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ contents: [{ parts: [{ text: "請針對以下素材產出 5 題具思辨性的選擇題：\n" + content + "\n\n格式：Q1.題目\n(A)選 (B)選 (C)選 (D)選\n答案：X\n解析：[詳盡思辨]" }] }] })
                 });
-
-                const data = await response.json();
-                if (data.error) throw new Error(data.error.message);
-
+                const data = await res.json();
                 document.getElementById('ai-output').value = data.candidates[0].content.parts[0].text;
                 document.getElementById('ai-result-area').classList.remove('hidden');
-                document.getElementById('ai-result-area').scrollIntoView({ behavior: 'smooth' });
-            } catch (err) {
-                alert("AI 生成失敗：" + err.message);
-            } finally {
-                loader.classList.remove('flex');
-            }
+            } catch (e) { alert("生成失敗"); }
+            finally { document.getElementById('loader').classList.replace('flex', 'hidden'); }
         }
 
-        async function syncToQuiz() {
-            const rawText = document.getElementById('ai-output').value;
-            const parsed = smartParse(rawText);
-            if (parsed.length === 0) return alert("解析失敗，請確認 AI 輸出格式");
+        // --- 核心解析與同步 ---
+        async function syncToQuiz(type) {
+            const text = type === 'ai' ? document.getElementById('ai-output').value : document.getElementById('manual-input').value;
+            const name = type === 'ai' ? document.getElementById('note-title').value + " (AI)" : document.getElementById('manual-quiz-name').value;
             
-            quizzes.push({ name: document.getElementById('note-title').value + " (AI)", data: parsed });
-            await db.collection("users").doc(syncKey).update({ quizzes: quizzes });
-            alert("已成功發送至練習空間！");
+            if(!syncKey) return alert("請先連線同步金鑰");
+            if(!text || !name) return alert("標題或內容不可為空");
+
+            const parsed = smartParse(text);
+            if(parsed.length === 0) return alert("解析失敗，請確認格式（需包含 Q1. 等標記）");
+
+            quizzes.push({ name, data: parsed });
+            await db.collection("users").doc(syncKey).update({ quizzes });
+            alert("題本已成功發送至學習空間！");
+            if(type === 'manual') { document.getElementById('manual-input').value = ''; document.getElementById('manual-quiz-name').value = ''; }
         }
 
         function smartParse(text) {
-            const lines = text.split('\n'); let questions = [], currentQ = null;
+            const lines = text.split('\n'); let questions = [], activePassage = "", currentQ = null, mode = "";
             lines.forEach(line => {
                 const l = line.trim();
+                if (l.includes('【文本】')) { mode = "PASSAGE"; activePassage = l.replace('【文本】', '').trim(); return; }
                 if (l.match(/^(Q\d+|[0-9]+)[\.\:：]/)) { 
                     if (currentQ) questions.push(currentQ); 
-                    currentQ = { q: l, options: [], ans: 0, rationale: "" }; 
-                } else if (l.match(/^答案[:：]/)) { 
+                    currentQ = { passage: activePassage, q: l, options: [], ans: 0, rationale: "" }; 
+                    mode = "Q"; return; 
+                }
+                if (l.match(/^答案[:：]/)) { 
                     const ans = l.match(/[A-D]/i); 
                     if (currentQ && ans) currentQ.ans = ans[0].toUpperCase().charCodeAt(0) - 65; 
-                } else if (l.match(/^解析[:：]/)) { 
+                    mode = "A"; return; 
+                }
+                if (l.match(/^解析[:：]/)) { 
                     if (currentQ) currentQ.rationale = l.replace(/^解析[:：]/, '').trim(); 
-                } else if (l.match(/^\([A-D]\)/)) { 
+                    mode = "R"; return; 
+                }
+                if (mode !== "R" && l.match(/^\([A-D]\)/)) { 
                     const opts = l.match(/\([A-D]\)[^(\n]+/g).map(o => o.replace(/\([A-D]\)/, '').trim()); 
                     if (currentQ) currentQ.options.push(...opts); 
+                    return; 
                 }
+                if (mode === "PASSAGE") activePassage += "\n" + line;
+                else if (mode === "Q" && currentQ) currentQ.q += "\n" + line;
+                else if (mode === "R" && currentQ) currentQ.rationale += "\n" + line;
             });
             if (currentQ) questions.push(currentQ);
             return questions;
