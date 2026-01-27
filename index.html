@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Study Master Studio v3.4 Ultimate</title>
+    <title>Study Master Studio v3.5 Split</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -20,7 +20,7 @@
 
     <header class="h-20 bg-slate-900 border-b border-slate-800 px-8 flex justify-between items-center z-50">
         <div class="flex items-center gap-6">
-            <h1 class="font-black tracking-tighter text-xl text-blue-500 italic">STUDIO 3.4+</h1>
+            <h1 class="font-black tracking-tighter text-xl text-blue-500 italic">STUDIO 3.5</h1>
             <nav class="flex gap-8 ml-4">
                 <button onclick="switchTab('manual')" id="tab-manual" class="py-2 text-sm font-black uppercase tracking-widest transition-all">手動題本管理</button>
                 <button onclick="switchTab('ai')" id="tab-ai" class="py-2 text-sm font-black uppercase tracking-widest text-slate-500 transition-all hover:text-slate-300">AI 命題工作室</button>
@@ -47,7 +47,7 @@
                             <input type="text" id="manual-quiz-name" class="w-full bg-transparent text-5xl font-black border-none outline-none placeholder-slate-800" placeholder="題本標題">
                         </div>
                     </div>
-                    <textarea id="manual-input" class="w-full h-[550px] bg-slate-800/30 border border-slate-800 rounded-[2.5rem] p-8 font-mono text-sm leading-relaxed text-slate-300 outline-none focus:border-blue-500 transition" placeholder="在此輸入或從右側載入題本內容...&#10;&#10;支援格式：&#10;【文本】或 [Text]&#10;Q1. 題目...&#10;(A) 選項...&#10;答案：A&#10;解析：..."></textarea>
+                    <textarea id="manual-input" class="w-full h-[550px] bg-slate-800/30 border border-slate-800 rounded-[2.5rem] p-8 font-mono text-sm leading-relaxed text-slate-300 outline-none focus:border-blue-500 transition" placeholder="在此輸入題本內容...&#10;&#10;[Tip] 若要分隔不同大題，請使用分隔線：&#10;======"></textarea>
                     
                     <div class="mt-8 flex gap-4">
                         <button onclick="syncToQuiz('manual')" class="flex-1 bg-slate-100 text-slate-900 py-5 rounded-2xl font-black text-lg hover:bg-white transition-all active:scale-95 shadow-2xl">
@@ -188,18 +188,21 @@
             
             let textOutput = "";
             quiz.data.forEach((item, i) => {
-                // 支援中文與英文文本標籤
+                // 如果這題的 passage 跟上一題不同，才顯示 [Text] (避免重複)
+                // 這裡簡化處理：如果 item.passage 存在就顯示
                 if (item.passage) textOutput += `【文本】\n${item.passage}\n\n`;
                 
                 textOutput += `${item.q}\n`;
                 
-                // 支援 A-Z 選項還原 (解決文意選填 A-J 顯示問題)
                 const labels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
                 item.options.forEach((opt, j) => {
                     textOutput += `(${labels[j]}) ${opt} `;
                 });
                 
                 textOutput += `\n答案：${labels[item.ans] || '?'}\n解析：${item.rationale}\n\n`;
+                
+                // 視覺分隔，方便編輯
+                textOutput += "======\n\n"; 
             });
 
             document.getElementById('manual-input').value = textOutput.trim();
@@ -238,7 +241,6 @@
 
             document.getElementById('loader').classList.replace('hidden', 'flex');
             try {
-                // 使用通用的 Prompt
                 const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -276,7 +278,7 @@
             if(type === 'manual') { document.getElementById('manual-input').value = ''; document.getElementById('manual-quiz-name').value = ''; }
         }
 
-        // --- 核心升級：雙語/全選項解析引擎 ---
+        // --- 核心升級 v3.5：分水嶺與選項隔離 ---
         function smartParse(text) {
             const lines = text.split('\n'); 
             let questions = [], activePassage = "", currentQ = null, mode = "";
@@ -284,8 +286,17 @@
             lines.forEach(line => {
                 const l = line.trim();
                 
+                // 0. 偵測分水嶺 (====== 或 ------)：強制重置上一題，避免選項跨區干擾
+                if (l.match(/^[-=]{3,}$/)) {
+                    if (currentQ) { questions.push(currentQ); currentQ = null; }
+                    mode = ""; // 重置模式
+                    return; // 跳過這一行
+                }
+
                 // 1. 偵測文本 (支援 [Text] 或 【文本】)
                 if (l.includes('[Text]') || l.includes('【文本】')) { 
+                    // 如果上一題還沒存，先存起來
+                    if (currentQ) { questions.push(currentQ); currentQ = null; }
                     mode = "PASSAGE"; 
                     activePassage = l.replace(/\[Text\]|【文本】/g, '').trim(); 
                     return; 
@@ -298,22 +309,21 @@
                     mode = "Q"; return; 
                 }
 
-                // 3. 偵測答案 (支援 Answer: 或 答案：，並支援 A-Z)
+                // 3. 偵測答案 (支援 Answer: 或 答案：)
                 if (l.match(/^(Answer|答案)[:：]/i)) { 
                     const ans = l.match(/[A-Z]/i); 
                     if (currentQ && ans) currentQ.ans = ans[0].toUpperCase().charCodeAt(0) - 65; 
                     mode = "A"; return; 
                 }
 
-                // 4. 偵測解析 (支援 Rationale, Analysis, 解析)
+                // 4. 偵測解析
                 if (l.match(/^(Rationale|Analysis|解析)[:：]/i)) { 
                     if (currentQ) currentQ.rationale = l.replace(/^(Rationale|Analysis|解析)[:：]/i, '').trim(); 
                     mode = "R"; return; 
                 }
 
-                // 5. 偵測選項 (A) (B) (C) (D) (E) ... (F)...
-                if (mode !== "R" && l.match(/^\([A-Z]\)/)) { 
-                    // 支援單行多選項分割 (如: (A) xxx (B) xxx)
+                // 5. 偵測選項 (關鍵修復：如果是 PASSAGE 模式，禁止偵測選項！)
+                if (mode !== "R" && mode !== "PASSAGE" && l.match(/^\([A-Z]\)/)) { 
                     const opts = l.match(/\([A-Z]\)[^(\n]+/g);
                     if (opts) {
                         const cleanedOpts = opts.map(o => o.replace(/\([A-Z]\)/, '').trim());
@@ -322,8 +332,8 @@
                     return; 
                 }
 
-                // 6. 處理多行內容拼接
-                if (mode === "PASSAGE") activePassage += "\n" + line;
+                // 6. 處理多行內容
+                if (mode === "PASSAGE") activePassage += "\n" + line; // 這裡會把 (A)... 存進文章，因為上面擋住了
                 else if (mode === "Q" && currentQ) currentQ.q += "\n" + line;
                 else if (mode === "R" && currentQ) currentQ.rationale += "\n" + line;
             });
