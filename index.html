@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Study Master Studio v3.6 Ultimate</title>
+    <title>Study Master Studio v3.7 Ultimate</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -20,7 +20,7 @@
 
     <header class="h-20 bg-slate-900 border-b border-slate-800 px-8 flex justify-between items-center z-50">
         <div class="flex items-center gap-6">
-            <h1 class="font-black tracking-tighter text-xl text-blue-500 italic">STUDIO 3.6</h1>
+            <h1 class="font-black tracking-tighter text-xl text-blue-500 italic">STUDIO 3.7</h1>
             <nav class="flex gap-8 ml-4">
                 <button onclick="switchTab('manual')" id="tab-manual" class="py-2 text-sm font-black uppercase tracking-widest transition-all">手動題本管理</button>
                 <button onclick="switchTab('ai')" id="tab-ai" class="py-2 text-sm font-black uppercase tracking-widest text-slate-500 transition-all hover:text-slate-300">AI 命題工作室</button>
@@ -37,7 +37,6 @@
     </header>
 
     <main class="flex-1 overflow-hidden relative">
-        
         <div id="view-manual" class="absolute inset-0 flex overflow-hidden">
             <section class="flex-1 p-12 overflow-y-auto custom-scroll">
                 <div class="max-w-4xl mx-auto">
@@ -47,19 +46,15 @@
                             <input type="text" id="manual-quiz-name" class="w-full bg-transparent text-5xl font-black border-none outline-none placeholder-slate-800" placeholder="題本標題">
                         </div>
                     </div>
-                    <textarea id="manual-input" class="w-full h-[550px] bg-slate-800/30 border border-slate-800 rounded-[2.5rem] p-8 font-mono text-sm leading-relaxed text-slate-300 outline-none focus:border-blue-500 transition" placeholder="在此輸入題本內容...&#10;&#10;[Text] 區塊內的選項 (A)(B)... 將自動作為下方題目的備選單字。&#10;使用 ====== 分隔大題。"></textarea>
-                    
+                    <textarea id="manual-input" class="w-full h-[550px] bg-slate-800/30 border border-slate-800 rounded-[2.5rem] p-8 font-mono text-sm leading-relaxed text-slate-300 outline-none focus:border-blue-500 transition" placeholder="在此輸入題本內容..."></textarea>
                     <div class="mt-8 flex gap-4">
-                        <button onclick="syncToQuiz('manual')" class="flex-1 bg-slate-100 text-slate-900 py-5 rounded-2xl font-black text-lg hover:bg-white transition-all active:scale-95 shadow-2xl">
-                            儲存並更新至雲端
-                        </button>
+                        <button onclick="syncToQuiz('manual')" class="flex-1 bg-slate-100 text-slate-900 py-5 rounded-2xl font-black text-lg hover:bg-white transition-all active:scale-95 shadow-2xl">儲存並同步至雲端</button>
                     </div>
                 </div>
             </section>
-
             <aside class="w-80 bg-slate-900/50 border-l border-slate-800 p-6 flex flex-col">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">已完成題本 (雲端)</h2>
+                    <h2 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">已完成題本</h2>
                     <span id="quiz-count" class="text-[10px] bg-slate-800 px-2 py-1 rounded text-slate-400">0</span>
                 </div>
                 <div id="quiz-list" class="flex-1 space-y-3 overflow-y-auto custom-scroll pr-2"></div>
@@ -71,42 +66,29 @@
                 <h2 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6">Source Materials</h2>
                 <div id="note-list" class="flex-1 space-y-2 overflow-y-auto custom-scroll pr-2"></div>
                 <button onclick="createNewNote()" class="w-full mt-4 py-3 bg-slate-800 rounded-xl text-xs font-bold hover:bg-slate-700 transition">+ 新增素材筆記</button>
-                
                 <div class="mt-8 pt-6 border-t border-slate-800">
                     <label class="text-[9px] font-black text-slate-500 uppercase block mb-2">Gemini API Key</label>
                     <input type="password" id="gemini-key" onchange="saveKey()" class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-xs text-emerald-400 outline-none" placeholder="AIza...">
                 </div>
             </aside>
-
             <section class="flex-1 overflow-y-auto custom-scroll p-12">
                 <div id="ai-editor" class="hidden max-w-4xl mx-auto">
                     <div class="flex justify-between items-center mb-8">
                         <input type="text" id="note-title" class="bg-transparent text-5xl font-black border-none outline-none flex-1 placeholder-slate-800" placeholder="素材標題">
                         <button onclick="saveNote()" class="bg-slate-800 hover:bg-slate-700 px-6 py-2 rounded-xl text-xs font-bold transition">暫存素材</button>
                     </div>
-                    <textarea id="note-content" class="w-full min-h-[300px] bg-transparent text-xl leading-relaxed text-slate-300 outline-none resize-none mb-10 font-serif" placeholder="貼上欲命題的文本..."></textarea>
-                    
-                    <div class="bg-blue-900/20 rounded-[3rem] p-10 border border-blue-500/20 shadow-2xl">
-                        <div class="flex justify-between items-center mb-8">
-                            <h3 class="text-xl font-bold italic text-blue-400">⚡ AI 智能命題</h3>
-                            <select id="model-select" class="bg-slate-900 text-xs p-2 rounded-lg border-none outline-none text-blue-400">
-                                <option value="gemini-1.5-flash">Gemini 1.5 Flash (快速)</option>
-                                <option value="gemini-1.5-pro">Gemini 1.5 Pro (深度)</option>
-                            </select>
-                        </div>
-                        <button onclick="generateQuiz()" class="w-full bg-blue-600 hover:bg-blue-500 py-6 rounded-2xl font-black text-xl shadow-xl transition-all active:scale-95">
-                            根據素材生成 5 題
-                        </button>
+                    <textarea id="note-content" class="w-full min-h-[300px] bg-transparent text-xl leading-relaxed text-slate-300 outline-none resize-none mb-10 font-serif" placeholder="貼上素材..."></textarea>
+                    <div class="bg-blue-900/20 rounded-[3rem] p-10 border border-blue-500/20 shadow-2xl text-center">
+                        <select id="model-select" class="mb-4 bg-slate-900 text-xs p-2 rounded-lg border-none outline-none text-blue-400">
+                            <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                            <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                        </select>
+                        <button onclick="generateQuiz()" class="w-full bg-blue-600 hover:bg-blue-500 py-6 rounded-2xl font-black text-xl shadow-xl transition-all">根據素材生成題目</button>
                     </div>
-
                     <div id="ai-result-area" class="mt-12 hidden">
                         <textarea id="ai-output" class="w-full h-80 p-8 bg-black/50 rounded-[2rem] border border-slate-800 text-slate-300 font-mono text-xs outline-none mb-4"></textarea>
-                        <button onclick="syncToQuiz('ai')" class="w-full bg-emerald-600 py-4 rounded-xl font-black hover:bg-emerald-500 transition shadow-lg">確認並發送題本</button>
+                        <button onclick="syncToQuiz('ai')" class="w-full bg-emerald-600 py-4 rounded-xl font-black">確認並發送</button>
                     </div>
-                </div>
-                <div id="ai-empty" class="h-full flex flex-col items-center justify-center text-slate-800">
-                    <p class="text-9xl mb-4 opacity-10">🪄</p>
-                    <p class="font-black italic text-xl uppercase tracking-widest">請從左側選擇素材開始 AI 命題</p>
                 </div>
             </section>
         </div>
@@ -118,14 +100,7 @@
     </div>
 
     <script>
-        const firebaseConfig = { 
-            apiKey: "AIzaSyD719pOpRDq9gfn8MpRsKILmYY8d0y-3n4", 
-            authDomain: "learning-41290.firebaseapp.com", 
-            projectId: "learning-41290", 
-            storageBucket: "learning-41290.firebasestorage.app", 
-            messagingSenderId: "451785140537", 
-            appId: "1:451785140537:web:668bc05ffa6fe68a51e0e8" 
-        };
+        const firebaseConfig = { apiKey: "AIzaSyD719pOpRDq9gfn8MpRsKILmYY8d0y-3n4", authDomain: "learning-41290.firebaseapp.com", projectId: "learning-41290", storageBucket: "learning-41290.firebasestorage.app", messagingSenderId: "451785140537", appId: "1:451785140537:web:668bc05ffa6fe68a51e0e8" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
@@ -190,7 +165,6 @@
         function loadQuizToManual(idx) {
             const quiz = quizzes[idx];
             document.getElementById('manual-quiz-name').value = quiz.name.replace(" (AI)", "");
-            
             let textOutput = "";
             let lastPassage = "";
             quiz.data.forEach((item, i) => {
@@ -198,39 +172,30 @@
                     textOutput += `【文本】\n${item.passage}\n\n`;
                     lastPassage = item.passage;
                 }
-                
                 textOutput += `${item.q}\n`;
                 const labels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-                item.options.forEach((opt, j) => {
-                    textOutput += `(${labels[j]}) ${opt} `;
-                });
-                
+                item.options.forEach((opt, j) => { textOutput += `(${labels[j]}) ${opt} `; });
                 textOutput += `\n答案：${labels[item.ans] || '?'}\n解析：${item.rationale}\n\n======\n\n`;
             });
-
             document.getElementById('manual-input').value = textOutput.trim();
-            alert(`已載入題本：${quiz.name}`);
         }
 
         async function deleteQuiz(idx) {
-            if(!confirm("確定要刪除此題本嗎？")) return;
+            if(!confirm("確定要刪除嗎？")) return;
             quizzes.splice(idx, 1);
             await db.collection("users").doc(syncKey).update({ quizzes });
         }
 
-        function createNewNote() { currentNoteIndex = notebooks.length; notebooks.push({ title: '', content: '' }); loadNote(currentNoteIndex); renderNoteList(); }
+        function createNewNote() { currentNoteIndex = notebooks.length; notebooks.push({ title: '', content: '' }); loadNote(currentNoteIndex); }
         function loadNote(idx) {
             currentNoteIndex = idx;
             document.getElementById('ai-empty').classList.add('hidden');
             document.getElementById('ai-editor').classList.remove('hidden');
             document.getElementById('note-title').value = notebooks[idx].title;
             document.getElementById('note-content').value = notebooks[idx].content;
-            document.getElementById('ai-result-area').classList.add('hidden');
-            renderNoteList();
         }
 
         async function saveNote() {
-            if (currentNoteIndex === -1) return;
             notebooks[currentNoteIndex].title = document.getElementById('note-title').value;
             notebooks[currentNoteIndex].content = document.getElementById('note-content').value;
             await db.collection("users").doc(syncKey).update({ notebooks });
@@ -240,14 +205,12 @@
         async function generateQuiz() {
             const content = document.getElementById('note-content').value.trim();
             const model = document.getElementById('model-select').value;
-            if(!geminiKey || !content) return alert("請確認資料完整");
-
             document.getElementById('loader').classList.replace('hidden', 'flex');
             try {
                 const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ contents: [{ parts: [{ text: "你是一位命題專家。請根據素材產出 5 題具備深度思考邏輯的選擇題：\n" + content + "\n\n格式規範：Q1.題目\n(A)選 (B)選 (C)選 (D)選\n答案：X\n解析：[詳盡分析]" }] }] })
+                    body: JSON.stringify({ contents: [{ parts: [{ text: "請出 5 題選擇題：\n" + content + "\n\nQ1.題目\n(A)選 (B)選 (C)選 (D)選\n答案：X\n解析：..." }] }] })
                 });
                 const data = await res.json();
                 document.getElementById('ai-output').value = data.candidates[0].content.parts[0].text;
@@ -259,29 +222,15 @@
         async function syncToQuiz(type) {
             const text = type === 'ai' ? document.getElementById('ai-output').value : document.getElementById('manual-input').value;
             const name = type === 'ai' ? document.getElementById('note-title').value + " (AI)" : document.getElementById('manual-quiz-name').value;
-            
-            if(!syncKey || !text || !name) return alert("資訊不完整");
-
             const parsed = smartParse(text);
-            if(parsed.length === 0) return alert("解析失敗：請檢查格式");
-
             const existingIdx = quizzes.findIndex(q => q.name === name);
-            if (existingIdx !== -1) {
-                if(confirm("要覆蓋更新現有題本嗎？")) {
-                    quizzes[existingIdx].data = parsed;
-                } else {
-                    quizzes.push({ name: name + " (Rev)", data: parsed });
-                }
-            } else {
-                quizzes.push({ name, data: parsed });
-            }
-
+            if (existingIdx !== -1) { quizzes[existingIdx].data = parsed; } 
+            else { quizzes.push({ name, data: parsed }); }
             await db.collection("users").doc(syncKey).update({ quizzes });
             alert("同步成功！");
-            if(type === 'manual') { document.getElementById('manual-input').value = ''; document.getElementById('manual-quiz-name').value = ''; }
         }
 
-        // --- 核心邏輯 v3.6：智慧選項繼承 ---
+        // --- 核心升級 v3.7：解決「Answer」單字導致永遠抓到 A 的問題 ---
         function smartParse(text) {
             const lines = text.split('\n'); 
             let questions = [], activePassage = "", currentQ = null, mode = "";
@@ -289,7 +238,6 @@
 
             lines.forEach(line => {
                 const l = line.trim();
-                
                 if (l.match(/^[-=]{3,}$/)) {
                     if (currentQ) { 
                         if (currentQ.options.length === 0) currentQ.options = [...activePassageOptions];
@@ -297,7 +245,6 @@
                     }
                     mode = ""; return; 
                 }
-
                 if (l.includes('[Text]') || l.includes('【文本】')) { 
                     if (currentQ) { 
                         if (currentQ.options.length === 0) currentQ.options = [...activePassageOptions];
@@ -308,7 +255,6 @@
                     activePassageOptions = []; 
                     return; 
                 }
-
                 if (l.match(/^(Q\d+|[0-9]+)[\.\:：]/)) { 
                     if (currentQ) {
                         if (currentQ.options.length === 0) currentQ.options = [...activePassageOptions];
@@ -317,36 +263,32 @@
                     currentQ = { passage: activePassage, q: l, options: [], ans: 0, rationale: "" }; 
                     mode = "Q"; return; 
                 }
-
+                // 修復處：先刪除關鍵字，再抓取剩下的第一個字母 A-Z
                 if (l.match(/^(Answer|答案)[:：]/i)) { 
-                    const ans = l.match(/[A-Z]/i); 
-                    if (currentQ && ans) currentQ.ans = ans[0].toUpperCase().charCodeAt(0) - 65; 
+                    const contentAfterColon = l.replace(/^(Answer|答案)[:：]/i, '');
+                    const ansMatch = contentAfterColon.match(/[A-Z]/i); 
+                    if (currentQ && ansMatch) {
+                        currentQ.ans = ansMatch[0].toUpperCase().charCodeAt(0) - 65;
+                    }
                     mode = "A"; return; 
                 }
-
                 if (l.match(/^(Rationale|Analysis|解析)[:：]/i)) { 
                     if (currentQ) currentQ.rationale = l.replace(/^(Rationale|Analysis|解析)[:：]/i, '').trim(); 
                     mode = "R"; return; 
                 }
-
                 if (l.match(/^\([A-Z]\)/)) { 
                     const opts = l.match(/\([A-Z]\)[^(\n]+/g);
                     if (opts) {
                         const cleanedOpts = opts.map(o => o.replace(/\([A-Z]\)/, '').trim());
-                        if (mode === "PASSAGE") {
-                            activePassageOptions.push(...cleanedOpts);
-                        } else if (currentQ) {
-                            currentQ.options.push(...cleanedOpts);
-                        }
+                        if (mode === "PASSAGE") activePassageOptions.push(...cleanedOpts);
+                        else if (currentQ) currentQ.options.push(...cleanedOpts);
                     }
                     if (mode !== "PASSAGE") return; 
                 }
-
                 if (mode === "PASSAGE") activePassage += "\n" + line;
                 else if (mode === "Q" && currentQ) currentQ.q += "\n" + line;
                 else if (mode === "R" && currentQ) currentQ.rationale += "\n" + line;
             });
-
             if (currentQ) {
                 if (currentQ.options.length === 0) currentQ.options = [...activePassageOptions];
                 questions.push(currentQ);
