@@ -3,24 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Study Master Studio v3.7 Ultimate</title>
+    <title>Study Master Studio v3.10 (Smart Paste)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         html, body { height: 100vh; overflow: hidden; background-color: #0f172a; color: #f1f5f9; }
         .tab-active { color: #3b82f6; border-bottom: 3px solid #3b82f6; }
         .custom-scroll::-webkit-scrollbar { width: 5px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
         .quiz-card:hover .delete-btn { opacity: 1; }
+        .json-badge { font-size: 10px; background: #3b82f6; color: white; padding: 2px 6px; border-radius: 4px; margin-left: 8px; vertical-align: middle; }
     </style>
 </head>
 <body class="flex flex-col font-sans" onload="switchTab('manual')">
 
     <header class="h-20 bg-slate-900 border-b border-slate-800 px-8 flex justify-between items-center z-50">
         <div class="flex items-center gap-6">
-            <h1 class="font-black tracking-tighter text-xl text-blue-500 italic">STUDIO 3.7</h1>
+            <h1 class="font-black tracking-tighter text-xl text-blue-500 italic">STUDIO 3.10</h1>
             <nav class="flex gap-8 ml-4">
                 <button onclick="switchTab('manual')" id="tab-manual" class="py-2 text-sm font-black uppercase tracking-widest transition-all">手動題本管理</button>
                 <button onclick="switchTab('ai')" id="tab-ai" class="py-2 text-sm font-black uppercase tracking-widest text-slate-500 transition-all hover:text-slate-300">AI 命題工作室</button>
@@ -28,6 +28,9 @@
         </div>
         
         <div class="flex items-center gap-4">
+            <button onclick="copySystemPrompt()" class="bg-emerald-600/20 text-emerald-400 border border-emerald-500/50 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-600 hover:text-white transition flex items-center gap-2">
+                <span>📋 複製神級 Prompt</span>
+            </button>
             <div class="flex items-center gap-2 bg-slate-800 p-1 rounded-xl border border-white/5 text-[10px]">
                 <input type="password" id="sync-key" class="bg-transparent border-none px-3 py-1 text-white outline-none w-24" placeholder="同步金鑰">
                 <button onclick="initSync()" class="font-black bg-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-500 transition">CONNECT</button>
@@ -46,12 +49,20 @@
                             <input type="text" id="manual-quiz-name" class="w-full bg-transparent text-5xl font-black border-none outline-none placeholder-slate-800" placeholder="題本標題">
                         </div>
                     </div>
-                    <textarea id="manual-input" class="w-full h-[550px] bg-slate-800/30 border border-slate-800 rounded-[2.5rem] p-8 font-mono text-sm leading-relaxed text-slate-300 outline-none focus:border-blue-500 transition" placeholder="在此輸入題本內容..."></textarea>
+                    <div class="mb-4 text-xs text-slate-500 font-mono bg-slate-800/50 p-3 rounded-lg border border-slate-700">
+                        💡 <b>Smart Paste 已啟用：</b> 直接貼上 AI 產生的 JSON，系統會自動轉換格式。<br>
+                        👉 點擊右上角「複製神級 Prompt」取得專用指令。
+                    </div>
+                    <textarea id="manual-input" class="w-full h-[500px] bg-slate-800/30 border border-slate-800 rounded-[2.5rem] p-8 font-mono text-sm leading-relaxed text-slate-300 outline-none focus:border-blue-500 transition" placeholder="在此貼上..."></textarea>
+                    
                     <div class="mt-8 flex gap-4">
-                        <button onclick="syncToQuiz('manual')" class="flex-1 bg-slate-100 text-slate-900 py-5 rounded-2xl font-black text-lg hover:bg-white transition-all active:scale-95 shadow-2xl">儲存並同步至雲端</button>
+                        <button onclick="syncToQuiz('manual')" class="flex-1 bg-slate-100 text-slate-900 py-5 rounded-2xl font-black text-lg hover:bg-white transition-all active:scale-95 shadow-2xl">
+                            儲存並同步至雲端
+                        </button>
                     </div>
                 </div>
             </section>
+
             <aside class="w-80 bg-slate-900/50 border-l border-slate-800 p-6 flex flex-col">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">已完成題本</h2>
@@ -62,53 +73,20 @@
         </div>
 
         <div id="view-ai" class="absolute inset-0 hidden flex">
-            <aside class="w-72 bg-slate-900/50 border-r border-slate-800 p-6 flex flex-col">
-                <h2 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-6">Source Materials</h2>
-                <div id="note-list" class="flex-1 space-y-2 overflow-y-auto custom-scroll pr-2"></div>
-                <button onclick="createNewNote()" class="w-full mt-4 py-3 bg-slate-800 rounded-xl text-xs font-bold hover:bg-slate-700 transition">+ 新增素材筆記</button>
-                <div class="mt-8 pt-6 border-t border-slate-800">
-                    <label class="text-[9px] font-black text-slate-500 uppercase block mb-2">Gemini API Key</label>
-                    <input type="password" id="gemini-key" onchange="saveKey()" class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-xs text-emerald-400 outline-none" placeholder="AIza...">
-                </div>
-            </aside>
-            <section class="flex-1 overflow-y-auto custom-scroll p-12">
-                <div id="ai-editor" class="hidden max-w-4xl mx-auto">
-                    <div class="flex justify-between items-center mb-8">
-                        <input type="text" id="note-title" class="bg-transparent text-5xl font-black border-none outline-none flex-1 placeholder-slate-800" placeholder="素材標題">
-                        <button onclick="saveNote()" class="bg-slate-800 hover:bg-slate-700 px-6 py-2 rounded-xl text-xs font-bold transition">暫存素材</button>
-                    </div>
-                    <textarea id="note-content" class="w-full min-h-[300px] bg-transparent text-xl leading-relaxed text-slate-300 outline-none resize-none mb-10 font-serif" placeholder="貼上素材..."></textarea>
-                    <div class="bg-blue-900/20 rounded-[3rem] p-10 border border-blue-500/20 shadow-2xl text-center">
-                        <select id="model-select" class="mb-4 bg-slate-900 text-xs p-2 rounded-lg border-none outline-none text-blue-400">
-                            <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-                            <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-                        </select>
-                        <button onclick="generateQuiz()" class="w-full bg-blue-600 hover:bg-blue-500 py-6 rounded-2xl font-black text-xl shadow-xl transition-all">根據素材生成題目</button>
-                    </div>
-                    <div id="ai-result-area" class="mt-12 hidden">
-                        <textarea id="ai-output" class="w-full h-80 p-8 bg-black/50 rounded-[2rem] border border-slate-800 text-slate-300 font-mono text-xs outline-none mb-4"></textarea>
-                        <button onclick="syncToQuiz('ai')" class="w-full bg-emerald-600 py-4 rounded-xl font-black">確認並發送</button>
-                    </div>
-                </div>
-            </section>
+             <div class="flex-1 flex items-center justify-center text-slate-500">
+                 <p>AI 命題功能請使用 Manual Editor 配合 Smart Paste 以獲得最佳體驗。</p>
+             </div>
         </div>
     </main>
-
-    <div id="loader" class="fixed inset-0 bg-slate-950/90 backdrop-blur-xl z-[100] hidden flex-col items-center justify-center text-white">
-        <div class="w-12 h-12 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mb-6"></div>
-        <p class="font-black text-xl tracking-tighter uppercase">Processing Data...</p>
-    </div>
 
     <script>
         const firebaseConfig = { apiKey: "AIzaSyD719pOpRDq9gfn8MpRsKILmYY8d0y-3n4", authDomain: "learning-41290.firebaseapp.com", projectId: "learning-41290", storageBucket: "learning-41290.firebasestorage.app", messagingSenderId: "451785140537", appId: "1:451785140537:web:668bc05ffa6fe68a51e0e8" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        let notebooks = [], quizzes = [], syncKey = localStorage.getItem('master_sync_key') || '';
-        let currentNoteIndex = -1, geminiKey = localStorage.getItem('master_gemini_key') || '';
+        let quizzes = [], syncKey = localStorage.getItem('master_sync_key') || '';
 
         if(syncKey) { document.getElementById('sync-key').value = syncKey; initSync(); }
-        if(geminiKey) document.getElementById('gemini-key').value = geminiKey;
 
         function switchTab(mode) {
             document.getElementById('view-ai').classList.toggle('hidden', mode !== 'ai');
@@ -122,26 +100,11 @@
             if(!key) return; syncKey = key; localStorage.setItem('master_sync_key', key);
             db.collection("users").doc(syncKey).onSnapshot(doc => {
                 if(doc.exists) { 
-                    notebooks = doc.data().notebooks || []; 
                     quizzes = doc.data().quizzes || []; 
-                    renderNoteList(); 
                     renderQuizList();
                 } else {
                     db.collection("users").doc(syncKey).set({ notebooks: [], quizzes: [] });
                 }
-            });
-        }
-
-        function saveKey() { geminiKey = document.getElementById('gemini-key').value.trim(); localStorage.setItem('master_gemini_key', geminiKey); }
-        
-        function renderNoteList() {
-            const list = document.getElementById('note-list'); list.innerHTML = '';
-            notebooks.forEach((n, idx) => {
-                const card = document.createElement('div');
-                card.className = `p-3 rounded-lg cursor-pointer transition text-[11px] font-bold uppercase ${currentNoteIndex === idx ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`;
-                card.innerHTML = n.title || 'Untitled';
-                card.onclick = () => loadNote(idx);
-                list.appendChild(card);
             });
         }
 
@@ -165,121 +128,148 @@
         function loadQuizToManual(idx) {
             const quiz = quizzes[idx];
             document.getElementById('manual-quiz-name').value = quiz.name.replace(" (AI)", "");
+            
             let textOutput = "";
             let lastPassage = "";
             quiz.data.forEach((item, i) => {
                 if (item.passage && item.passage !== lastPassage) {
-                    textOutput += `【文本】\n${item.passage}\n\n`;
+                    textOutput += `[Text]\n${item.passage}\n\n`;
                     lastPassage = item.passage;
                 }
                 textOutput += `${item.q}\n`;
                 const labels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
                 item.options.forEach((opt, j) => { textOutput += `(${labels[j]}) ${opt} `; });
-                textOutput += `\n答案：${labels[item.ans] || '?'}\n解析：${item.rationale}\n\n======\n\n`;
+                textOutput += `\nAnswer: ${labels[item.ans] || '?'}\nRationale: ${item.rationale}\n\n======\n\n`;
             });
             document.getElementById('manual-input').value = textOutput.trim();
         }
 
         async function deleteQuiz(idx) {
-            if(!confirm("確定要刪除嗎？")) return;
+            if(!confirm("確定要刪除此題本嗎？")) return;
             quizzes.splice(idx, 1);
             await db.collection("users").doc(syncKey).update({ quizzes });
         }
 
-        function createNewNote() { currentNoteIndex = notebooks.length; notebooks.push({ title: '', content: '' }); loadNote(currentNoteIndex); }
-        function loadNote(idx) {
-            currentNoteIndex = idx;
-            document.getElementById('ai-empty').classList.add('hidden');
-            document.getElementById('ai-editor').classList.remove('hidden');
-            document.getElementById('note-title').value = notebooks[idx].title;
-            document.getElementById('note-content').value = notebooks[idx].content;
-        }
-
-        async function saveNote() {
-            notebooks[currentNoteIndex].title = document.getElementById('note-title').value;
-            notebooks[currentNoteIndex].content = document.getElementById('note-content').value;
-            await db.collection("users").doc(syncKey).update({ notebooks });
-            alert("素材已存檔");
-        }
-
-        async function generateQuiz() {
-            const content = document.getElementById('note-content').value.trim();
-            const model = document.getElementById('model-select').value;
-            document.getElementById('loader').classList.replace('hidden', 'flex');
-            try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ contents: [{ parts: [{ text: "請出 5 題選擇題：\n" + content + "\n\nQ1.題目\n(A)選 (B)選 (C)選 (D)選\n答案：X\n解析：..." }] }] })
-                });
-                const data = await res.json();
-                document.getElementById('ai-output').value = data.candidates[0].content.parts[0].text;
-                document.getElementById('ai-result-area').classList.remove('hidden');
-            } catch (e) { alert("AI 出錯"); }
-            finally { document.getElementById('loader').classList.replace('flex', 'hidden'); }
-        }
-
         async function syncToQuiz(type) {
-            const text = type === 'ai' ? document.getElementById('ai-output').value : document.getElementById('manual-input').value;
-            const name = type === 'ai' ? document.getElementById('note-title').value + " (AI)" : document.getElementById('manual-quiz-name').value;
+            const text = document.getElementById('manual-input').value;
+            const name = document.getElementById('manual-quiz-name').value;
+            if(!syncKey || !text || !name) return alert("資訊不完整");
             const parsed = smartParse(text);
+            if(parsed.length === 0) return alert("解析失敗");
+
             const existingIdx = quizzes.findIndex(q => q.name === name);
-            if (existingIdx !== -1) { quizzes[existingIdx].data = parsed; } 
-            else { quizzes.push({ name, data: parsed }); }
+            if (existingIdx !== -1) {
+                if(confirm("要覆蓋更新現有題本嗎？")) quizzes[existingIdx].data = parsed;
+                else quizzes.push({ name: name + " (Rev)", data: parsed });
+            } else {
+                quizzes.push({ name, data: parsed });
+            }
             await db.collection("users").doc(syncKey).update({ quizzes });
             alert("同步成功！");
         }
 
-        // --- 核心升級 v3.7：解決「Answer」單字導致永遠抓到 A 的問題 ---
+        // --- 核心升級：智慧貼上 (Smart Paste) ---
+        // 監聽貼上事件，自動轉換 JSON
+        document.getElementById('manual-input').addEventListener('paste', (event) => {
+            const pasteData = event.clipboardData.getData('text');
+            try {
+                // 嘗試解析 JSON
+                // 移除可能的 Markdown 代碼塊標記 (```json ... ```)
+                const cleanData = pasteData.replace(/```json|```/g, '').trim();
+                const data = JSON.parse(cleanData);
+
+                // 檢查是否為題目陣列
+                if (Array.isArray(data)) {
+                    event.preventDefault(); // 阻止原始貼上
+                    let formattedText = "";
+                    
+                    data.forEach((item, idx) => {
+                        // 處理題幹與文章
+                        if (item.article && idx === 0) formattedText += `[Text]\n${item.article}\n\n`;
+                        else if (item.article && item.article !== data[idx-1]?.article) formattedText += `\n======\n\n[Text]\n${item.article}\n\n`;
+                        
+                        // 處理題目
+                        formattedText += `Q${idx+1}. ${item.question}\n`;
+                        
+                        // 處理選項
+                        const labels = ["A", "B", "C", "D", "E", "F"];
+                        if (item.options && Array.isArray(item.options)) {
+                            item.options.forEach((opt, i) => {
+                                formattedText += `(${labels[i]}) ${opt} `;
+                            });
+                        }
+                        
+                        // 處理答案與解析
+                        formattedText += `\nAnswer: ${item.answer}\nRationale: ${item.explanation}\n\n`;
+                    });
+
+                    // 插入游標處
+                    const textarea = event.target;
+                    const start = textarea.selectionStart;
+                    const end = textarea.selectionEnd;
+                    const text = textarea.value;
+                    textarea.value = text.substring(0, start) + formattedText + text.substring(end);
+                    
+                    // 通知用戶
+                    alert(`✅ Smart Paste: 成功轉換 ${data.length} 題 AI 題目！`);
+                }
+            } catch (e) {
+                // 不是 JSON，執行普通貼上，不打擾
+                console.log("Normal paste (not JSON)");
+            }
+        });
+
+        // --- 神級 Prompt 複製器 ---
+        function copySystemPrompt() {
+            const prompt = `你是一位資深的高中教師。請根據我提供的主題或文本，設計單選題。
+請務必嚴格遵守以下 JSON 陣列格式輸出 (不要包含 Markdown 標記)：
+[
+  {
+    "article": "文章內容 (若為閱讀測驗填此，若無則留空)",
+    "question": "題目內容",
+    "options": ["選項1", "選項2", "選項3", "選項4"],
+    "answer": "A", 
+    "explanation": "詳細解析 (包含正確與錯誤選項分析)"
+  }
+]`;
+            navigator.clipboard.writeText(prompt).then(() => alert("📋 Prompt 已複製！請貼給 Gemini。"));
+        }
+
+        // --- 核心解析引擎 v3.8 ---
         function smartParse(text) {
             const lines = text.split('\n'); 
             let questions = [], activePassage = "", currentQ = null, mode = "";
             let activePassageOptions = []; 
-
             lines.forEach(line => {
                 const l = line.trim();
+                if (!l) return;
                 if (l.match(/^[-=]{3,}$/)) {
-                    if (currentQ) { 
-                        if (currentQ.options.length === 0) currentQ.options = [...activePassageOptions];
-                        questions.push(currentQ); currentQ = null; 
-                    }
+                    if (currentQ) { if (currentQ.options.length === 0) currentQ.options = [...activePassageOptions]; questions.push(currentQ); currentQ = null; }
                     mode = ""; return; 
                 }
-                if (l.includes('[Text]') || l.includes('【文本】')) { 
-                    if (currentQ) { 
-                        if (currentQ.options.length === 0) currentQ.options = [...activePassageOptions];
-                        questions.push(currentQ); currentQ = null; 
-                    }
-                    mode = "PASSAGE"; 
-                    activePassage = l.replace(/\[Text\]|【文本】/g, '').trim(); 
-                    activePassageOptions = []; 
-                    return; 
+                if (l.match(/[\[【]?(Text|文本)[\]】]?/i)) { 
+                    if (currentQ) { if (currentQ.options.length === 0) currentQ.options = [...activePassageOptions]; questions.push(currentQ); currentQ = null; }
+                    mode = "PASSAGE"; activePassage = l.replace(/[\[【]?(Text|文本)[\]】]?/gi, '').trim(); activePassageOptions = []; return; 
                 }
-                if (l.match(/^(Q\d+|[0-9]+)[\.\:：]/)) { 
-                    if (currentQ) {
-                        if (currentQ.options.length === 0) currentQ.options = [...activePassageOptions];
-                        questions.push(currentQ); 
-                    }
-                    currentQ = { passage: activePassage, q: l, options: [], ans: 0, rationale: "" }; 
-                    mode = "Q"; return; 
+                if (l.match(/^[\(（]?(Q\d+|[0-9]+)[\)）]?[\.\:：\s]/i)) { 
+                    if (currentQ) { if (currentQ.options.length === 0) currentQ.options = [...activePassageOptions]; questions.push(currentQ); }
+                    currentQ = { passage: activePassage, q: l, options: [], ans: 0, rationale: "" }; mode = "Q"; return; 
                 }
-                // 修復處：先刪除關鍵字，再抓取剩下的第一個字母 A-Z
-                if (l.match(/^(Answer|答案)[:：]/i)) { 
-                    const contentAfterColon = l.replace(/^(Answer|答案)[:：]/i, '');
-                    const ansMatch = contentAfterColon.match(/[A-Z]/i); 
-                    if (currentQ && ansMatch) {
-                        currentQ.ans = ansMatch[0].toUpperCase().charCodeAt(0) - 65;
-                    }
-                    mode = "A"; return; 
+                if (l.match(/(Answer|答案|Ans)/i)) { 
+                    const ansMatch = l.match(/[\(（\s:：為]([A-Z])[）\)\s\.]/i) || l.match(/([A-Z])[\s\.]*$/i);
+                    if (currentQ && ansMatch) { currentQ.ans = ansMatch[1].toUpperCase().charCodeAt(0) - 65; }
+                    else { const fallback = l.match(/[A-Z]/); if (currentQ && fallback) currentQ.ans = fallback[0].toUpperCase().charCodeAt(0) - 65; }
+                    mode = "A"; 
+                    if (!l.match(/[\[【]?(Rationale|Analysis|解析)[\]】]?/i)) return;
                 }
-                if (l.match(/^(Rationale|Analysis|解析)[:：]/i)) { 
-                    if (currentQ) currentQ.rationale = l.replace(/^(Rationale|Analysis|解析)[:：]/i, '').trim(); 
+                if (l.match(/[\[【]?(Rationale|Analysis|解析)[\]】]?/i)) { 
+                    if (currentQ) { currentQ.rationale = l.replace(/[\[【]?(Rationale|Analysis|解析|答案)[\]】]?[:：為\s]*/gi, '').trim(); }
                     mode = "R"; return; 
                 }
-                if (l.match(/^\([A-Z]\)/)) { 
-                    const opts = l.match(/\([A-Z]\)[^(\n]+/g);
+                if (l.match(/^[\(（]?[A-Z][\)）\.]/)) { 
+                    const opts = l.match(/[\(（]?[A-Z][\)）\.][^(\n]+/g);
                     if (opts) {
-                        const cleanedOpts = opts.map(o => o.replace(/\([A-Z]\)/, '').trim());
+                        const cleanedOpts = opts.map(o => o.replace(/[\(（]?[A-Z][\)）\.]/, '').trim());
                         if (mode === "PASSAGE") activePassageOptions.push(...cleanedOpts);
                         else if (currentQ) currentQ.options.push(...cleanedOpts);
                     }
@@ -289,10 +279,7 @@
                 else if (mode === "Q" && currentQ) currentQ.q += "\n" + line;
                 else if (mode === "R" && currentQ) currentQ.rationale += "\n" + line;
             });
-            if (currentQ) {
-                if (currentQ.options.length === 0) currentQ.options = [...activePassageOptions];
-                questions.push(currentQ);
-            }
+            if (currentQ) { if (currentQ.options.length === 0) currentQ.options = [...activePassageOptions]; questions.push(currentQ); }
             return questions;
         }
     </script>
